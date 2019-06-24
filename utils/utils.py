@@ -72,7 +72,8 @@ def ap_per_class(tp, conf, pred_cls, target_cls):
     """
 
     # Sort by objectness
-    i = np.argsort(-conf)
+    # i = np.argsort(-conf)
+    i = torch.argsort(-conf)
     tp, conf, pred_cls = tp[i], conf[i], pred_cls[i]
 
     # Find unique classes
@@ -93,25 +94,45 @@ def ap_per_class(tp, conf, pred_cls, target_cls):
             p.append(0)
         else:
             # Accumulate FPs and TPs
-            fpc = (1 - tp[i]).cumsum()
-            tpc = (tp[i]).cumsum()
+            fpc = (1 - tp[i]).cumsum(dim=0)
+            tpc = (tp[i]).cumsum(dim=0)
 
             # Recall
             recall_curve = tpc / (n_gt + 1e-16)
-            r.append(recall_curve[-1])
+            r.append(recall_curve[-1].item())
 
             # Precision
             precision_curve = tpc / (tpc + fpc)
-            p.append(precision_curve[-1])
+            p.append(precision_curve[-1].item())
 
             # AP from recall-precision curve
-            ap.append(compute_ap(recall_curve, precision_curve))
+            # ap.append(compute_ap(recall_curve, precision_curve))
+            ap.append(compute_ap_torch(recall_curve, precision_curve))
 
     # Compute F1 score (harmonic mean of precision and recall)
     p, r, ap = np.array(p), np.array(r), np.array(ap)
     f1 = 2 * p * r / (p + r + 1e-16)
 
     return p, r, ap, f1, unique_classes.astype("int32")
+
+
+def compute_ap_torch(recall, precision):
+    # correct AP calculation
+    # first append sentinel values at the end
+    mrec = torch.cat((torch.tensor([0.0]), recall, torch.tensor([1.0])))
+    mpre = torch.cat((torch.tensor([0.0]), precision, torch.tensor([0.0])))
+
+    # compute the precision envelope
+    for i in range(mpre.shape[0]-1, 0, -1):
+        mpre[i - 1] = torch.max(mpre[i - 1], mpre[i])
+
+    # to calculate area under PR curve, look for points
+    # where X axis (recall) changes value
+    i = int(torch.where(mrec[1:] != mrec[:-1], mrec[1:], mrec[:-1])[0].item())
+
+    # and sum (\Delta recall) * prec
+    ap = torch.sum((mrec[i + 1] - mrec[i]) * mpre[i + 1])
+    return ap.item()
 
 
 def compute_ap(recall, precision):
@@ -155,7 +176,8 @@ def get_batch_statistics(outputs, targets, iou_threshold):
         pred_scores = output[:, 4]
         pred_labels = output[:, -1]
 
-        true_positives = np.zeros(pred_boxes.shape[0])
+        # true_positives = np.zeros(pred_boxes.shape[0])
+        true_positives = torch.zeros(pred_boxes.shape[0])
 
         annotations = targets[targets[:, 0] == sample_i][:, 1:]
         target_labels = annotations[:, 0] if len(annotations) else []
