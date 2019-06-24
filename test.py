@@ -16,7 +16,6 @@ import torch
 from torch.utils.data import DataLoader
 from torchvision import datasets
 from torchvision import transforms
-from torch.autograd import Variable
 import torch.optim as optim
 
 from config.pytorch_config import CUDA
@@ -34,6 +33,8 @@ def evaluate(model, path, iou_thres, conf_thres, nms_thres, img_size, batch_size
     labels = []
     sample_metrics = []  # List of tuples (TP, confs, pred)
     for batch_i, (_, imgs, targets) in enumerate(tqdm.tqdm(dataloader, desc="Detecting objects")):
+        if batch_i > 0:
+            break
 
         # Extract labels
         labels += targets[:, 1].tolist()
@@ -42,9 +43,7 @@ def evaluate(model, path, iou_thres, conf_thres, nms_thres, img_size, batch_size
         targets[:, 2:] = xywh2xyxy(targets[:, 2:])
         targets[:, 2:] *= img_size
 
-        if CUDA:
-            imgs = imgs.cuda()
-        # imgs = Variable(imgs.type(Tensor), requires_grad=False)
+        imgs = imgs.to(device)
 
         with torch.no_grad():
             outputs = model(imgs)
@@ -107,4 +106,4 @@ if __name__ == "__main__":
     for i, c in enumerate(ap_class):
         print(f"+ Class '{c}' ({class_names[c]}) - AP: {AP[i]}")
 
-    print(f"mAP: {AP.mean()}")
+    print("mAP:{:.2%}".format(AP.mean()))
