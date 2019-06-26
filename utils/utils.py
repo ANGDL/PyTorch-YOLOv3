@@ -72,7 +72,6 @@ def ap_per_class(tp, conf, pred_cls, target_cls):
     """
 
     # Sort by objectness
-    # i = np.argsort(-conf)
     i = torch.argsort(-conf)
     tp, conf, pred_cls = tp[i], conf[i], pred_cls[i]
 
@@ -106,7 +105,6 @@ def ap_per_class(tp, conf, pred_cls, target_cls):
             p.append(precision_curve[-1].item())
 
             # AP from recall-precision curve
-            # ap.append(compute_ap(recall_curve, precision_curve))
             ap.append(compute_ap_torch(recall_curve, precision_curve))
 
     # Compute F1 score (harmonic mean of precision and recall)
@@ -128,7 +126,6 @@ def compute_ap_torch(recall, precision):
 
     # to calculate area under PR curve, look for points
     # where X axis (recall) changes value
-    # i = int(torch.where(mrec[1:] != mrec[:-1], mrec[1:], mrec[:-1])[0].item())
     ii = []
     for i in range(mrec.shape[0] - 1):
         if mrec[1:][i] != mrec[0:-1][i]:
@@ -138,7 +135,6 @@ def compute_ap_torch(recall, precision):
     for i in ii:
         ap = ap + torch.sum((mrec[i] - mrec[i-1]) * mpre[i])
     # and sum (\Delta recall) * prec
-    # ap = torch.sum((mrec[i + 1] - mrec[i]) * mpre[i + 1])
     return ap.item()
 
 
@@ -298,10 +294,10 @@ def build_targets(pred_boxes, pred_cls, target, anchors, ignore_thres):
     ByteTensor = torch.cuda.ByteTensor if pred_boxes.is_cuda else torch.ByteTensor
     FloatTensor = torch.cuda.FloatTensor if pred_boxes.is_cuda else torch.FloatTensor
 
-    nB = pred_boxes.size(0)
-    nA = pred_boxes.size(1)
-    nC = pred_cls.size(-1)
-    nG = pred_boxes.size(2)
+    nB = pred_boxes.size(0)  # batch_size， number of images
+    nA = pred_boxes.size(1)  # the number of anchor boxes
+    nC = pred_cls.size(-1)   # the number of classes
+    nG = pred_boxes.size(2)  # grid size
 
     # Output tensors
     obj_mask = ByteTensor(nB, nA, nG, nG).fill_(0)

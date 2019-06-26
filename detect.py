@@ -65,8 +65,6 @@ if __name__ == "__main__":
 
     classes = load_classes(opt.class_path)  # Extracts class labels from file
 
-    # Tensor = torch.cuda.FloatTensor if torch.cuda.is_available() else torch.FloatTensor
-
     imgs = []  # Stores image paths
     img_detections = []  # Stores detections for each image index
 
@@ -74,7 +72,6 @@ if __name__ == "__main__":
     prev_time = time.time()
     for batch_i, (img_paths, input_imgs) in enumerate(dataloader):
         # Configure input
-        # input_imgs = Variable(input_imgs.type(Tensor))
         input_imgs = input_imgs.to(device)
 
         # Get detections
@@ -113,7 +110,6 @@ if __name__ == "__main__":
             # Rescale boxes to original image
             detections = rescale_boxes(detections, opt.img_size, img.shape[:2]).numpy()
             unique_labels = np.unique(detections[:, -1])
-            # unique_labels = detections[:, -1].cpu().unique()
             n_cls_preds = len(unique_labels)
             bbox_colors = random.sample(colors, n_cls_preds)
             for x1, y1, x2, y2, conf, cls_conf, cls_pred in detections:

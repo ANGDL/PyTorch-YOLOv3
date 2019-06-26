@@ -122,6 +122,7 @@ class ListDataset(Dataset):
             boxes[:, 3] *= w_factor / padded_w
             boxes[:, 4] *= h_factor / padded_h
 
+            # targets的第0个维度，是每个batch中图像的索引， 用于标记anchor box属于哪个图像，方便loss的计算
             targets = torch.zeros((len(boxes), 6))
             targets[:, 1:] = torch.FloatTensor(boxes)
 
